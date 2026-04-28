@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: crime-reporting-db
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: crime-reporting
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - crime-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend service (commented - run locally for development)
+  # backend:
+  #   build:
+  #     context: ./server
+  #     dockerfile: Dockerfile
+  #   container_name: crime-reporting-api
+  #   ports:
+  #     - "5000:5000"
+  #   environment:
+  #     MONGODB_URI: mongodb://admin:password@mongodb:27017/crime-reporting?authSource=admin
+  #     PORT: 5000
+  #     NODE_ENV: development
+  #     JWT_SECRET: dev_secret_key
+  #     CLIENT_URL: http://localhost:3000
+  #   depends_on:
+  #     mongodb:
+  #       condition: service_healthy
+  #   networks:
+  #     - crime-network
+  #   volumes:
+  #     - ./server:/app
+  #     - /app/node_modules
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  crime-network:
+    driver: bridge
