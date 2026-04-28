@@ -15,29 +15,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/images/marker-shadow.png'
 });
 
-const getCrimeMarkerIcon = (crimeType) => {
-  const colors = {
-    'theft': 'red',
-    'assault': 'darkred',
-    'robbery': 'purple',
-    'burglary': 'blue',
-    'accident': 'orange',
-    'vandalism': 'yellow',
-    'fraud': 'green',
-    'harassment': 'pink',
-    'other': 'gray'
-  };
-  const color = colors[crimeType] || 'gray';
 
-  return L.icon({
-    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-${color}.png`,
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-  });
-};
 
 const LiveMap = () => {
   const [reports, setReports] = useState([]);
