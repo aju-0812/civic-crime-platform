@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://ajendra_as:aju08%402006@cluster0.it5ad3m.mongodb.net/crime-reporting?appName=Cluster0')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://ajendra_as:aju08%402006@cluster0.it5ad3m.mongodb.net/crime-reporting?appName=Cluster0', { dbName: 'crime-reporting' })
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
