@@ -36,6 +36,7 @@ app.use((req, res, next) => {
 // Routes
 const reportRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admins');
+const https = require('https');
 
 app.use('/api/reports', reportRoutes);
 app.use('/api/admins', adminRoutes);
@@ -43,6 +44,50 @@ app.use('/api/admins', adminRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' });
+});
+
+// Overpass API Proxy to bypass Vercel frontend CORS blocks
+app.get('/api/facilities', (req, res) => {
+  const { type, lat, lng, radius } = req.query;
+  
+  if (!type || !lat || !lng) {
+    return res.status(400).json({ success: false, message: 'Missing parameters' });
+  }
+
+  const query = `[out:json][timeout:50];nwr["amenity"="${type}"](around:${radius || 200000}, ${lat}, ${lng});out center 50;`;
+  
+  const options = {
+    hostname: 'overpass-api.de',
+    path: `/api/interpreter?data=${encodeURIComponent(query)}`,
+    method: 'GET',
+    headers: {
+      'User-Agent': 'CivicCrimePlatformBackend/1.0'
+    }
+  };
+
+  const proxyReq = https.request(options, (proxyRes) => {
+    let data = '';
+    proxyRes.on('data', (chunk) => data += chunk);
+    proxyRes.on('end', () => {
+      if (proxyRes.statusCode !== 200) {
+        console.error('Overpass API returned status:', proxyRes.statusCode);
+        return res.status(500).json({ success: false, message: 'Mapping API Error' });
+      }
+      try {
+        res.json({ success: true, data: JSON.parse(data) });
+      } catch (e) {
+        console.error('Parse error:', e);
+        res.status(500).json({ success: false, message: 'Invalid JSON from Mapping API' });
+      }
+    });
+  });
+
+  proxyReq.on('error', (err) => {
+    console.error('Proxy Error:', err);
+    res.status(500).json({ success: false, message: 'Failed to connect to Mapping API' });
+  });
+
+  proxyReq.end();
 });
 
 // Socket.IO Real-time Updates

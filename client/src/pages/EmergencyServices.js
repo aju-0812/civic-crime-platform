@@ -96,16 +96,17 @@ const EmergencyServices = () => {
     setFacilities([]);
     
     try {
-      // 200km radius (200000m), limited to 50 results so the browser doesn't crash
-      const query = `[out:json][timeout:50];nwr["amenity"="${type}"](around:200000, ${userLocation[0]}, ${userLocation[1]});out center 50;`;
-      
-      const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+      // Send request to our backend proxy instead of directly to Overpass API to bypass Vercel CORS blocking
+      const API_BASE = process.env.REACT_APP_API_URL || 'https://civic-crime-api.onrender.com/api';
+      const response = await fetch(`${API_BASE}/facilities?type=${type}&lat=${userLocation[0]}&lng=${userLocation[1]}&radius=200000`);
       
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
       
-      const data = await response.json();
+      const resData = await response.json();
+      const data = resData.data; // The actual overpass response is nested under data
+
       
       const validFacilities = data.elements
         .map(el => {
