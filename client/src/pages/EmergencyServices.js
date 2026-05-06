@@ -39,18 +39,24 @@ const policeIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-const MapCenter = ({ center }) => {
+const MapCenter = ({ center, facilities }) => {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [center, map]);
+    if (facilities && facilities.length > 0) {
+      const bounds = L.latLngBounds([center]);
+      facilities.forEach(f => bounds.extend([f.lat, f.lng]));
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+    } else {
+      map.setView(center, 13);
+    }
+  }, [center, facilities, map]);
   return null;
 };
 
 const EmergencyServices = () => {
   const [userLocation, setUserLocation] = useState([28.6139, 77.2090]); // Default
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('Police Station');
+  const [activeTab, setActiveTab] = useState(null);
   const [currentAddress, setCurrentAddress] = useState('Acquiring your precise physical address...');
   const [facilities, setFacilities] = useState([]);
   const [fetchingFacilities, setFetchingFacilities] = useState(false);
@@ -83,80 +89,51 @@ const EmergencyServices = () => {
     if (!loading) fetchAddress();
   }, [userLocation, loading]);
 
-  // Dynamic Mock Generator: Creates realistic pins around the user's exact GPS
-  const generateMockFacilities = (centerLat, centerLng, type) => {
-    const mockFacilities = [];
-    const count = type === 'police' ? 5 : 8;
+  // Trigger search manually
+  const handleSearch = async (type) => {
+    setActiveTab(type === 'police' ? 'Police Station' : 'Hospitals & Clinics');
+    setFetchingFacilities(true);
+    setFacilities([]);
     
-    for (let i = 0; i < count; i++) {
-      // Generate random offset between 1km and 8km
-      const radiusInDegrees = (Math.random() * 0.06) + 0.01;
-      const angle = Math.random() * Math.PI * 2;
+    try {
+      // 200km radius (200000m), limited to 50 results so the browser doesn't crash
+      const query = `[out:json][timeout:50];nwr["amenity"="${type}"](around:200000, ${userLocation[0]}, ${userLocation[1]});out center 50;`;
       
-      mockFacilities.push({
-        id: `mock-${i}`,
-        name: type === 'police' 
-          ? `District ${i + 1} Local Police Station` 
-          : `${['City', 'General', 'Metro', 'Care', 'Hope', 'Regional', 'Life', 'Sunrise'][i]} Medical Hospital`,
-        phone: `+91 ${Math.floor(1000000000 + Math.random() * 9000000000)}`,
-        lat: centerLat + Math.sin(angle) * radiusInDegrees,
-        lng: centerLng + Math.cos(angle) * radiusInDegrees
-      });
-    }
-    return mockFacilities;
-  };
-
-  // Sync pins based on active tab
-  useEffect(() => {
-    const fetchPins = async () => {
-      setFetchingFacilities(true);
-      const amenityType = activeTab === 'Police Station' ? 'police' : 'hospital';
+      const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
       
-      try {
-        // 50km radius (50000m) to ensure rural areas find facilities
-        const query = `[out:json][timeout:25];(node["amenity"="${amenityType}"](around:50000, ${userLocation[0]}, ${userLocation[1]});way["amenity"="${amenityType}"](around:50000, ${userLocation[0]}, ${userLocation[1]});relation["amenity"="${amenityType}"](around:50000, ${userLocation[0]}, ${userLocation[1]}););out center;`;
-        
-        // Using GET request to avoid CORS preflight issues on deployed Vercel apps
-        const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
-        
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        
-        const data = await response.json();
-        
-        const validFacilities = data.elements
-          .map(el => {
-            const lat = el.lat || el.center?.lat;
-            const lng = el.lon || el.center?.lon;
-            if (!lat || !lng) return null;
-            return {
-              id: el.id,
-              name: el.tags?.name || (activeTab === 'Police Station' ? 'Local Police Station' : 'Medical Hospital'),
-              phone: el.tags?.phone || el.tags?.['contact:phone'] || 'Call General Emergency Services',
-              lat,
-              lng
-            };
-          })
-          .filter(Boolean);
-          
-        // If API returns zero results (rural area), inject realistic mock data so map isn't empty
-        if (validFacilities.length === 0) {
-          setFacilities(generateMockFacilities(userLocation[0], userLocation[1], amenityType));
-        } else {
-          setFacilities(validFacilities.slice(0, 30));
-        }
-      } catch (err) {
-        console.error("Facility pin sweep failed. Falling back to mock spatial data.", err);
-        // Fallback: If Vercel blocks the API completely, generate mock data around user's GPS
-        setFacilities(generateMockFacilities(userLocation[0], userLocation[1], amenityType));
-      } finally {
-        setFetchingFacilities(false);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
       }
-    };
-
-    if (!loading) fetchPins();
-  }, [activeTab, userLocation, loading]);
+      
+      const data = await response.json();
+      
+      const validFacilities = data.elements
+        .map(el => {
+          const lat = el.lat || el.center?.lat;
+          const lng = el.lon || el.center?.lon;
+          if (!lat || !lng) return null;
+          return {
+            id: el.id,
+            name: el.tags?.name || (type === 'police' ? 'Local Police Station' : 'Medical Hospital'),
+            phone: el.tags?.phone || el.tags?.['contact:phone'] || 'Call General Emergency Services',
+            lat,
+            lng
+          };
+        })
+        .filter(Boolean);
+        
+      if (validFacilities.length === 0) {
+        alert(`No ${type === 'police' ? 'police stations' : 'hospitals'} found within a 200km radius on OpenStreetMap.`);
+      }
+      
+      setFacilities(validFacilities);
+    } catch (err) {
+      console.error("Facility search failed.", err);
+      alert("Failed to fetch real-time data from the mapping server. Please try again later.");
+    } finally {
+      setFetchingFacilities(false);
+    }
+  };
 
   return (
     <div className="services-page">
@@ -181,26 +158,28 @@ const EmergencyServices = () => {
           </div>
         </div>
 
-        {/* Custom Header Tabs */}
+        {/* Custom Header Tabs (Now functioning as Search Buttons) */}
         <div className="tab-buttons">
           <button 
-            onClick={() => setActiveTab('Police Station')}
+            onClick={() => handleSearch('police')}
+            disabled={fetchingFacilities || loading}
             className={`tab-btn ${activeTab === 'Police Station' ? 'active-police' : ''}`}
           >
-            <Shield size={20} /> Display Local Police
+            <Shield size={20} /> Search Police Stations Near Me
           </button>
           
           <button 
-            onClick={() => setActiveTab('Hospitals & Clinics')}
+            onClick={() => handleSearch('hospital')}
+            disabled={fetchingFacilities || loading}
             className={`tab-btn ${activeTab === 'Hospitals & Clinics' ? 'active-hospital' : ''}`}
           >
-            <Stethoscope size={20} /> Display Hospitals & Clinics
+            <Stethoscope size={20} /> Search Hospitals Near Me
           </button>
         </div>
 
         {fetchingFacilities && (
           <div style={{ textAlign: 'center', color: '#94a3b8', marginBottom: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-            <Search size={16} className="spinner-icon" /> Synchronizing radar data over the grid...
+            <Search size={16} className="spinner-icon" /> Searching a 200km radius for real facilities...
           </div>
         )}
 
@@ -214,10 +193,10 @@ const EmergencyServices = () => {
           ) : (
             <MapContainer center={userLocation} zoom={13} style={{ width: '100%', height: '100%' }}>
               <TileLayer
-                attribution='&copy; Google Maps'
-                url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+                attribution='&copy; OpenStreetMap'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <MapCenter center={userLocation} />
+              <MapCenter center={userLocation} facilities={facilities} />
               
               <Marker position={userLocation} icon={userIcon}>
                 <Popup className="service-popup">
