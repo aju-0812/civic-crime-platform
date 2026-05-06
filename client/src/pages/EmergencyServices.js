@@ -89,8 +89,8 @@ const EmergencyServices = () => {
       setFetchingFacilities(true);
       try {
         const amenityType = activeTab === 'Police Station' ? 'police' : 'hospital';
-        // 15km radius (15000m) 
-        const query = `[out:json][timeout:25];(node["amenity"="${amenityType}"](around:15000, ${userLocation[0]}, ${userLocation[1]});way["amenity"="${amenityType}"](around:15000, ${userLocation[0]}, ${userLocation[1]});relation["amenity"="${amenityType}"](around:15000, ${userLocation[0]}, ${userLocation[1]}););out center;`;
+        // 50km radius (50000m) to ensure rural areas find facilities
+        const query = `[out:json][timeout:25];(node["amenity"="${amenityType}"](around:50000, ${userLocation[0]}, ${userLocation[1]});way["amenity"="${amenityType}"](around:50000, ${userLocation[0]}, ${userLocation[1]});relation["amenity"="${amenityType}"](around:50000, ${userLocation[0]}, ${userLocation[1]}););out center;`;
         
         // Using GET request to avoid CORS preflight issues on deployed Vercel apps
         const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
