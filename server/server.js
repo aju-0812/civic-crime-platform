@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: process.env.CLIENT_URL || 'https://civic-crime-api.onrender.com',
     methods: ['GET', 'POST']
   }
 });
@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/crime-reporting')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://ajendra_as:aju08%402006@cluster0.it5ad3m.mongodb.net/crime-reporting?appName=Cluster0')
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.error('❌ MongoDB connection error:', err));
 

@@ -37,5 +37,5 @@ coverage/
 .cache/
 
 # Uploads (but keep directory)
-uploads/*
+server/uploads/*
 !uploads/.gitkeep

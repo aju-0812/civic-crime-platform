@@ -239,7 +239,7 @@ const LiveMap = () => {
                       <div className="report-media">
                         {report.mediaFiles.map((file, idx) => {
                           const safePath = file.path?.startsWith('/') ? file.path : `/${file.path || ''}`;
-                          const fileUrl = safePath.startsWith('http') ? safePath : `http://localhost:5000${safePath.replace(/\\/g, '/')}`;
+                          const fileUrl = safePath.startsWith('http') ? safePath : `https://civic-crime-api.onrender.com${safePath.replace(/\\/g, '/')}`;
                           const isImage = file.filename?.match(/\.(jpeg|jpg|gif|png|webp|jfif)$/i) || fileUrl.match(/\.(jpeg|jpg|gif|png|webp|jfif)$/i);
                           
                           return isImage ? (

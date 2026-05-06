@@ -2,7 +2,7 @@
   "name": "crime-reporting-frontend",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:5000",
+  "proxy": "https://civic-crime-api.onrender.com",
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
     "axios": "^1.3.0",
